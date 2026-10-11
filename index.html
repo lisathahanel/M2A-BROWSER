@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Edition | M2A Browser 2 </title>
+  <meta name="description" content="M2A Browser — Search, discover and browse from one clean interface">
+  <style>
+    :root {
+      --bg: #0c0e0b;
+      --panel: #161814;
+      --panel-2: #1e211b;
+      --border: #35372e;
+      --gold: #d8b800;
+      --gold-dim: #a88e00;
+      --gold-glow: rgba(216, 184, 0, 0.18);
+      --text: #f4f1e8;
+      --muted: #9ea193;
+      --radius: 11px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #m2a {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: var(--bg);
+    }
+    #m2a:fullscreen { height: 100vh; }
+    /* Theater mode fallback for browsers without fullscreen API (e.g. iPhone Safari) */
+    #m2a.theater {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      height: 100vh;
+    }
+
+    /* ===== TOP BAR ===== */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 18px;
+      background: #121410;
+      border-bottom: 1px solid var(--border);
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .brand-wrap { display: flex; align-items: center; gap: 10px; }
+    .brand {
+      font-size: 1.28rem;
+      font-weight: 900;
+      letter-spacing: 1.6px;
+      color: var(--gold);
+      line-height: 1.1;
+    }
+    .brand-sub {
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+      margin-top: 1px;
+    }
+    .fs-btn {
+      background: var(--gold);
+      color: #171811;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: filter 0.15s, transform 0.1s;
+    }
+    .fs-btn:hover { filter: brightness(1.08); }
+    .fs-btn:active { transform: scale(0.97); }
+
+    /* ===== TOOLBAR ===== */
+    .toolbar {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      padding: 9px 14px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 40px;
+      height: 40px;
+      border-radius: 9px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .nav-btn:hover:not(:disabled) {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: #252820;
+    }
+    .nav-btn:disabled {
+      opacity: 0.32;
+      cursor: default;
+    }
+
+    .address {
+      flex: 1;
+      min-width: 0;
+      height: 40px;
+      padding: 0 14px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: #0f110e;
+      color: var(--text);
+      font-size: 0.93rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .address:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+    .address::placeholder { color: #6b6e64; }
+
+    .go-btn {
+      background: var(--gold);
+      color: #171811;
+      border: none;
+      height: 40px;
+      padding: 0 18px;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: filter 0.15s;
+    }
+    .go-btn:hover { filter: brightness(1.08); }
+
+    /* ===== TABS ===== */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 7px 14px;
+      background: #10120e;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.86rem;
+      font-weight: 500;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--gold);
+      border-color: var(--gold);
+      background: #22251f;
+    }
+
+    /* ===== MAIN ===== */
+    .main {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .panel {
+      display: none;
+      height: 100%;
+      overflow: auto;
+    }
+    .panel.active { display: block; }
+
+    /* ===== HOME ===== */
+    .home {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 36px 18px 48px;
+      text-align: center;
+    }
+    .hero {
+      font-size: clamp(2.6rem, 7.5vw, 4.2rem);
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .tagline {
+      margin: 8px 0 6px;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .subtitle {
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto 26px;
+      line-height: 1.65;
+      font-size: 0.95rem;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      max-width: 700px;
+      margin: 0 auto 32px;
+    }
+    .search-input {
+      flex: 1;
+      height: 50px;
+      padding: 0 18px;
+      border-radius: 13px;
+      border: 1px solid #4a4c40;
+      background: #1c1f19;
+      color: var(--text);
+      font-size: 1.02rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+    .search-input::placeholder { color: #6b6e64; }
+    .search-btn {
+      height: 50px;
+      padding: 0 24px;
+      border-radius: 13px;
+      border: none;
+      background: var(--gold);
+      color: #171811;
+      font-weight: 800;
+      font-size: 0.98rem;
+      cursor: pointer;
+      transition: filter 0.15s;
+      white-space: nowrap;
+    }
+    .search-btn:hover { filter: brightness(1.08); }
+
+    /* ===== LATEST SLIDER ===== */
+    #mm5-latest-slider {
+      width: 100%;
+      max-width: 1140px;
+      margin: 12px auto 0;
+      position: relative;
+    }
+    .mm5-slider-title {
+      text-align: center;
+      color: var(--gold-dim);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+    .mm5-slider-window {
+      overflow: hidden;
+      border-radius: 15px;
+      background: #1f221c;
+      border: 1px solid rgba(216, 184, 0, 0.25);
+      box-shadow: var(--shadow);
+    }
+    .mm5-slider-track {
+      display: flex;
+      transition: transform 0.55s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .mm5-slide {
+      width: 310px;
+      flex: 0 0 310px;
+    }
+    .mm5-slide a {
+      display: block;
+      color: #fff;
+      text-decoration: none;
+    }
+    .mm5-slide-image {
+      position: relative;
+      height: 420px;
+      overflow: hidden;
+      background: #2a2c26;
+    }
+    .mm5-slide-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.45s ease;
+    }
+    .mm5-slide:hover img { transform: scale(1.06); }
+    .mm5-slide-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.45) 42%, transparent 78%);
+    }
+    .mm5-play {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: rgba(143, 118, 0, 0.93);
+      display: grid;
+      place-items: center;
+      font-size: 1.45rem;
+      box-shadow: 0 0 22px rgba(216,184,0,0.45);
+      opacity: 0.95;
+      transition: transform 0.2s;
+    }
+    .mm5-slide:hover .mm5-play { transform: translate(-50%, -50%) scale(1.08); }
+    .mm5-slide-content {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      padding: 18px 16px;
+      z-index: 2;
+    }
+    .mm5-slide-title {
+      font-size: 1.12rem;
+      font-weight: 800;
+      line-height: 1.28;
+      margin-bottom: 5px;
+    }
+    .mm5-slide-date {
+      font-size: 0.78rem;
+      color: var(--gold);
+    }
+    .mm5-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      width: 46px; height: 60px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(16,16,14,0.88);
+      color: #fff;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .mm5-arrow:hover { background: var(--gold-dim); }
+    .mm5-prev { left: 12px; }
+    .mm5-next { right: 12px; }
+    .mm5-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 0 4px;
+    }
+    .mm5-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: rgba(143,118,0,0.32);
+      cursor: pointer;
+      transition: 0.25s;
+    }
+    .mm5-dot.active {
+      width: 20px;
+      border-radius: 7px;
+      background: var(--gold-dim);
+    }
+    .mm5-loading {
+      padding: 68px 20px;
+      text-align: center;
+      color: var(--gold);
+      font-size: 0.95rem;
+    }
+
+    /* ===== BROWSER VIEW ===== */
+    .view-wrap {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .view {
+      flex: 1;
+      min-height: 0;
+      background: #fff;
+      position: relative;
+    }
+    .view iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+    .viewnote {
+      padding: 9px 16px;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .open-tab-btn {
+      background: var(--gold);
+      color: #171811;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: filter 0.15s;
+    }
+    .open-tab-btn:hover { filter: brightness(1.08); }
+
+    /* ===== SEARCH RESULTS ===== */
+    .results {
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 26px 18px 50px;
+    }
+    .results h2 {
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+    }
+    .results .muted {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+    .ad-slot {
+      margin: 0 0 20px;
+      padding: 12px 0;
+      border-radius: 10px;
+      background: #1a1c17;
+      border: 1px solid var(--border);
+      text-align: center;
+      min-height: 90px;
+      overflow: hidden;
+    }
+    .ad-label {
+      font-size: 0.7rem;
+      color: #6b6e64;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .search-engine-panel {
+      background: #fff;
+      color: #202124;
+      border-radius: 12px;
+      min-height: 260px;
+      overflow: hidden;
+      padding: 6px;
+    }
+    .search-setup {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: #1a1c17;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      line-height: 1.55;
+      display: none;
+      font-size: 0.9rem;
+    }
+    .search-direct {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 14px;
+      background: var(--gold);
+      color: #171811;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      padding: 8px 16px;
+      background: #121410;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: #7e8176;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .footer .dot { color: var(--gold); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 700px) {
+      .topbar { padding: 9px 12px; }
+      .brand { font-size: 1.1rem; }
+      .toolbar { padding: 7px 10px; gap: 5px; }
+      .nav-btn { width: 36px; height: 36px; font-size: 1rem; }
+      .address, .go-btn { height: 36px; font-size: 0.85rem; }
+      .go-btn { padding: 0 12px; }
+      .search-row { flex-direction: column; }
+      .search-btn { height: 46px; }
+      .mm5-slide { width: 80vw; flex-basis: 80vw; }
+      .mm5-slide-image { height: 380px; }
+      .mm5-arrow { width: 38px; height: 52px; font-size: 1.25rem; }
+      .mm5-prev { left: 6px; }
+      .mm5-next { right: 6px; }
+      .home { padding: 28px 14px 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="m2a">
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div>
+          <div class="brand">M2A BROWSER</div>
+          <div class="brand-sub">Search • Discover • Browse</div>
+        </div>
+      </div>
+      <button class="fs-btn" id="btn-fullscreen" title="Toggle fullscreen">⛶ Full Screen</button>
+    </header>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <button class="nav-btn" id="btn-home" title="Home (Alt+H)">⌂</button>
+      <button class="nav-btn" id="btn-back" title="Back" disabled>←</button>
+      <button class="nav-btn" id="btn-forward" title="Forward" disabled>→</button>
+      <input class="address" id="address" placeholder="Search anything or enter a website URL" autocomplete="off" spellcheck="false" aria-label="Address or search">
+      <button class="go-btn" id="btn-go">Go</button>
+    </div>
+
+    <!-- TABS -->
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="home" role="tab">M2A Home</button>
+      <button class="tab" data-tab="web" role="tab">Browser View</button>
+      <button class="tab" data-tab="search" role="tab">Search Results</button>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="main">
+      <!-- HOME -->
+      <section class="panel active" id="panel-home" role="tabpanel">
+        <div class="home">
+          <div class="hero">M2A</div>
+          <div class="tagline">Your web, one browser</div>
+          <p class="subtitle">
+            Type a website address to open it inside M2A, or search the web.
+            Sites that block embedding open cleanly in a new tab.
+          </p>
+
+          <form class="search-row" id="home-search-form">
+            <input class="search-input" id="home-search" placeholder="Search anything on the web…" required aria-label="Search the web">
+            <button class="search-btn" type="submit">Search ↗</button>
+          </form>
+
+          <!-- Latest Posts Slider -->
+          <div id="mm5-latest-slider">
+            <div class="mm5-slider-title">🎬 Latest on Marketing2Advertising</div>
+            <div class="mm5-slider-window">
+              <div class="mm5-slider-track" id="mm5LatestTrack">
+                <div class="mm5-loading">Loading latest posts…</div>
+              </div>
+            </div>
+            <button class="mm5-arrow mm5-prev" id="mm5LatestPrev" aria-label="Previous slide">❮</button>
+            <button class="mm5-arrow mm5-next" id="mm5LatestNext" aria-label="Next slide">❯</button>
+            <div class="mm5-dots" id="mm5LatestDots"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BROWSER VIEW -->
+      <section class="panel" id="panel-web" role="tabpanel">
+        <div class="view-wrap">
+          <div class="view">
+            <iframe id="frame" title="M2A Browser View"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allow="fullscreen; autoplay; clipboard-read; clipboard-write"
+              allowfullscreen></iframe>
+          </div>
+          <div class="viewnote">
+            <span>Some websites prevent embedding for security reasons.</span>
+            <button class="open-tab-btn" id="btn-open-tab">Open in new tab ↗</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEARCH RESULTS -->
+      <section class="panel" id="panel-search" role="tabpanel">
+        <div class="results">
+          <h2>Search the web with M2A</h2>
+          <p class="muted" id="search-status">Enter a query above or below to search the web.</p>
+
+          <form class="search-row" id="results-search-form" style="margin-bottom:18px">
+            <input class="search-input" id="results-search" placeholder="Search the whole web…" required aria-label="Search the web">
+            <button class="search-btn" type="submit">Search ↗</button>
+          </form>
+
+          <!-- Inline AdSense unit -->
+          <div class="ad-slot">
+            <div class="ad-label">Advertisement</div>
+            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2269884583846743"
+                 crossorigin="anonymous"></script>
+            <!-- Responsive ad -->
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-2269884583846743"
+                 data-ad-slot="5901052106"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>
+              try { (window.adsbygoogle = window.adsbygoogle || []).push({}); }
+              catch (e) { /* Ad blocker or slow connection — never break the page */ }
+            </script>
+          </div>
+
+          <div class="search-engine-panel">
+            <script async src="https://cse.google.com/cse.js?cx=507dbb9d520684d3f"></script>
+            <div class="gcse-search" data-gname="m2a-cse"></div>
+          </div>
+
+          <div class="search-setup" id="search-setup">
+            Search is taking longer than expected. You can try again or open Google Search directly.
+            <br>
+            <a class="search-direct" id="web-fallback" href="https://www.google.com/" target="_blank" rel="noopener noreferrer">Search Google in a new tab ↗</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>M2A Browser <span class="dot">●</span> Ready</span>
+      <span>External embedding depends on each site’s security policy</span>
+    </footer>
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ========== CONFIG ==========
+    const BLOG_URL = "https://www.marketing2advertising.com";
+    const POST_COUNT = 24;
+
+    // ========== DOM ==========
+    const app = document.getElementById("m2a");
+    const address = document.getElementById("address");
+    const frame = document.getElementById("frame");
+    const panels = {
+      home: document.getElementById("panel-home"),
+      web: document.getElementById("panel-web"),
+      search: document.getElementById("panel-search")
+    };
+    const btnBack = document.getElementById("btn-back");
+    const btnForward = document.getElementById("btn-forward");
+    const btnOpenTab = document.getElementById("btn-open-tab");
+    const searchStatus = document.getElementById("search-status");
+    const searchSetup = document.getElementById("search-setup");
+    const webFallback = document.getElementById("web-fallback");
+    const fsBtn = document.getElementById("btn-fullscreen");
+
+    // ========== STATE ==========
+    // History entries: { type: "home" | "url" | "search", value }
+    let currentUrl = "";
+    let historyStack = [{ type: "home", value: "" }];
+    let historyPos = 0;
+
+    // ========== HELPERS ==========
+    function showPanel(name) {
+      Object.keys(panels).forEach(k => {
+        panels[k].classList.toggle("active", k === name);
+      });
+      document.querySelectorAll(".tab").forEach(t => {
+        t.classList.toggle("active", t.dataset.tab === name);
+      });
+    }
+
+    function updateNavButtons() {
+      btnBack.disabled = historyPos <= 0;
+      btnForward.disabled = historyPos >= historyStack.length - 1;
+    }
+
+    // Add an entry, deduping consecutive duplicates and truncating any forward branch
+    function remember(entry) {
+      const prev = historyStack[historyPos];
+      if (prev && prev.type === entry.type && prev.value === entry.value) return;
+      historyStack = historyStack.slice(0, historyPos + 1);
+      historyStack.push(entry);
+      historyPos = historyStack.length - 1;
+      updateNavButtons();
+    }
+
+    function goHome(addHistory = true) {
+      if (addHistory) remember({ type: "home", value: "" });
+      showPanel("home");
+      address.value = "";
+    }
+
+    function isUrl(value) {
+      const v = value.trim();
+      if (/^https?:\/\//i.test(v)) {
+        try {
+          const u = new URL(v);
+          return (u.protocol === "http:" || u.protocol === "https:") ? u.href : null;
+        } catch { return null; }
+      }
+      if (/^[\w.-]+\.[a-z]{2,}([/:?#].*)?$/i.test(v)) {
+        return "https://" + v;
+      }
+      return null;
+    }
+
+    function openSite(url, addHistory = true) {
+      if (!url) return;
+      currentUrl = url;
+      if (addHistory) remember({ type: "url", value: url });
+      address.value = url;
+      frame.src = url;
+      showPanel("web");
+    }
+
+    function executeSearch(query, addHistory = true) {
+      const q = (query || "").trim();
+      if (!q) return;
+
+      if (addHistory) remember({ type: "search", value: q });
+      address.value = q;
+      document.getElementById("results-search").value = q;
+      document.getElementById("home-search").value = q;
+      showPanel("search");
+
+      webFallback.href = "https://www.google.com/search?q=" + encodeURIComponent(q);
+      searchStatus.textContent = 'Searching for: “' + q + '”…';
+      searchSetup.style.display = "none";
+
+      let attempts = 0;
+      function tryCSE() {
+        if (window.google && google.search && google.search.cse && google.search.cse.element) {
+          const el = google.search.cse.element.getElement("m2a-cse");
+          if (el) {
+            el.execute(q);
+            searchStatus.textContent = 'Results for: “' + q + '”';
+            return;
+          }
+        }
+        attempts++;
+        if (attempts < 45) {
+          setTimeout(tryCSE, 220);
+        } else {
+          searchStatus.textContent = "Search service is slow. You can try again or open Google directly.";
+          searchSetup.style.display = "block";
+        }
+      }
+      tryCSE();
+    }
+
+    // Navigate to the entry at historyPos (used by Back/Forward)
+    function navigateTo(item) {
+      if (item.type === "home") {
+        goHome(false);
+      } else if (item.type === "search") {
+        executeSearch(item.value, false);
+      } else {
+        openSite(item.value, false);
+      }
+      updateNavButtons();
+    }
+
+    // ========== EVENTS ==========
+    document.getElementById("btn-go").addEventListener("click", () => {
+      const v = address.value.trim();
+      const url = isUrl(v);
+      if (url) openSite(url);
+      else executeSearch(v);
+    });
+
+    address.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        document.getElementById("btn-go").click();
+      }
+    });
+
+    document.getElementById("home-search-form").addEventListener("submit", e => {
+      e.preventDefault();
+      executeSearch(document.getElementById("home-search").value);
+    });
+
+    document.getElementById("results-search-form").addEventListener("submit", e => {
+      e.preventDefault();
+      executeSearch(document.getElementById("results-search").value);
+    });
+
+    document.getElementById("btn-home").addEventListener("click", () => goHome(true));
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => showPanel(tab.dataset.tab));
+    });
+
+    btnOpenTab.addEventListener("click", () => {
+      if (currentUrl) window.open(currentUrl, "_blank", "noopener,noreferrer");
+    });
+
+    document.getElementById("btn-back").addEventListener("click", () => {
+      if (historyPos > 0) {
+        historyPos--;
+        navigateTo(historyStack[historyPos]);
+      }
+    });
+
+    document.getElementById("btn-forward").addEventListener("click", () => {
+      if (historyPos < historyStack.length - 1) {
+        historyPos++;
+        navigateTo(historyStack[historyPos]);
+      }
+    });
+
+    // Fullscreen with theater-mode fallback (iPhone Safari etc.)
+    const supportsFS = !!(document.documentElement.requestFullscreen || app.webkitEnterFullscreen || app.webkitRequestFullscreen);
+    if (!supportsFS) {
+      fsBtn.addEventListener("click", () => {
+        app.classList.toggle("theater");
+        const on = app.classList.contains("theater");
+        fsBtn.textContent = on ? "⛶ Exit Full Screen" : "⛶ Full Screen";
+      });
+    } else {
+      fsBtn.addEventListener("click", () => {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          const req = app.requestFullscreen || app.webkitRequestFullscreen;
+          req.call(app).catch(() => {});
+        } else {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exit) exit.call(document);
+        }
+      });
+      document.addEventListener("fullscreenchange", syncFsLabel);
+      document.addEventListener("webkitfullscreenchange", syncFsLabel);
+    }
+    function syncFsLabel() {
+      const on = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      fsBtn.textContent = on ? "⛶ Exit Full Screen" : "⛶ Full Screen";
+    }
+
+    // Keyboard shortcut: Alt+H → Home
+    document.addEventListener("keydown", e => {
+      if (e.altKey && e.key.toLowerCase() === "h") {
+        e.preventDefault();
+        goHome(true);
+      }
+    });
+
+    // ========== LATEST POSTS SLIDER ==========
+    (function initSlider() {
+      const track = document.getElementById("mm5LatestTrack");
+      const dots = document.getElementById("mm5LatestDots");
+      const prev = document.getElementById("mm5LatestPrev");
+      const next = document.getElementById("mm5LatestNext");
+      if (!track) return;
+
+      let currentIndex = 0;
+      let autoTimer = null;
+
+      function escapeHTML(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function getPostUrl(entry) {
+        if (!entry.link) return "#";
+        for (let i = 0; i < entry.link.length; i++) {
+          if (entry.link[i].rel === "alternate") return entry.link[i].href;
+        }
+        return "#";
+      }
+
+      function getPostImage(entry) {
+        let image = "https://placehold.co/800x1000/2a2c26/d8b800?text=M2A";
+        if (entry.media$thumbnail && entry.media$thumbnail.url) {
+          // Robust: matches /s72-c/, /s72-c-k-no/, =s72-c etc.
+          image = entry.media$thumbnail.url.replace(/\/s\d+(-c[^\/?]*)?(?=[\/?]|$)/, "/s800");
+        } else if (entry.content && entry.content.$t) {
+          const m = entry.content.$t.match(/<img[^>]+src=["']([^"']+)["']/i);
+          if (m && m[1]) image = m[1];
+        } else if (entry.summary && entry.summary.$t) {
+          const m = entry.summary.$t.match(/<img[^>]+src=["']([^"']+)["']/i);
+          if (m && m[1]) image = m[1];
+        }
+        return image;
+      }
+
+      function getDate(entry) {
+        if (!entry.published || !entry.published.$t) return "";
+        const d = new Date(entry.published.$t);
+        if (isNaN(d.getTime())) return "";
+        return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+      }
+
+      window.mm5LatestSliderCallback = function (json) {
+        if (!json || !json.feed || !json.feed.entry) {
+          track.innerHTML = '<div class="mm5-loading">No latest posts found.</div>';
+          return;
+        }
+
+        const entries = json.feed.entry;
+        let html = "";
+        entries.forEach((entry, i) => {
+          const title = (entry.title && entry.title.$t) ? entry.title.$t : "Untitled";
+          const url = getPostUrl(entry);
+          const image = getPostImage(entry);
+          const date = getDate(entry);
+
+          html += `
+            <div class="mm5-slide">
+              <a href="${escapeHTML(url)}" title="${escapeHTML(title)}" target="_blank" rel="noopener noreferrer">
+                <div class="mm5-slide-image">
+                  <img src="${escapeHTML(image)}" alt="${escapeHTML(title)}" loading="${i < 3 ? "eager" : "lazy"}" onerror="this.onerror=null;this.src='https://placehold.co/800x1000/2a2c26/d8b800?text=M2A';">
+                  <div class="mm5-slide-overlay"></div>
+                  <div class="mm5-play">▶</div>
+                  <div class="mm5-slide-content">
+                    <div class="mm5-slide-title">${escapeHTML(title)}</div>
+                    <div class="mm5-slide-date">${escapeHTML(date)}</div>
+                  </div>
+                </div>
+              </a>
+            </div>`;
+        });
+        track.innerHTML = html;
+        createDots(Math.min(entries.length, 10));
+        updateSlider();
+        startAuto();
+      };
+
+      function getSlideWidth() {
+        const slide = track.querySelector(".mm5-slide");
+        return slide ? slide.getBoundingClientRect().width : 0;
+      }
+
+      function maxIndex() {
+        const slides = track.querySelectorAll(".mm5-slide");
+        if (!slides.length) return 0;
+        const visible = Math.max(1, Math.floor(track.parentElement.clientWidth / getSlideWidth()));
+        return Math.max(0, slides.length - visible);
+      }
+
+      function updateSlider() {
+        const w = getSlideWidth();
+        if (!w) return;
+        track.style.transform = `translateX(-${currentIndex * w}px)`;
+        updateDots();
+      }
+
+      function goNext() {
+        currentIndex = currentIndex >= maxIndex() ? 0 : currentIndex + 1;
+        updateSlider();
+      }
+
+      function goPrev() {
+        currentIndex = currentIndex <= 0 ? maxIndex() : currentIndex - 1;
+        updateSlider();
+      }
+
+      function createDots(count) {
+        dots.innerHTML = "";
+        for (let i = 0; i < count; i++) {
+          const dot = document.createElement("span");
+          dot.className = "mm5-dot";
+          dot.addEventListener("click", () => {
+            currentIndex = Math.min(i, maxIndex());
+            updateSlider();
+            restartAuto();
+          });
+          dots.appendChild(dot);
+        }
+      }
+
+      function updateDots() {
+        const all = dots.querySelectorAll(".mm5-dot");
+        all.forEach((d, i) => {
+          d.classList.toggle("active", i === Math.min(currentIndex, all.length - 1));
+        });
+      }
+
+      prev.addEventListener("click", () => { goPrev(); restartAuto(); });
+      next.addEventListener("click", () => { goNext(); restartAuto(); });
+
+      function startAuto() {
+        clearInterval(autoTimer);
+        autoTimer = setInterval(goNext, 5200);
+      }
+      function restartAuto() { startAuto(); }
+
+      window.addEventListener("resize", () => {
+        currentIndex = 0;
+        updateSlider();
+      });
+
+      // Pause auto-slide while the user is away from the home tab
+      const observer = new MutationObserver(() => {
+        const homeVisible = panels.home.classList.contains("active");
+        if (homeVisible) { startAuto(); } else { clearInterval(autoTimer); }
+      });
+      observer.observe(panels.home, { attributes: true, attributeFilter: ["class"] });
+
+      // Load Blogger feed
+      const script = document.createElement("script");
+      script.src = `${BLOG_URL}/feeds/posts/default?alt=json-in-script&max-results=${POST_COUNT}&orderby=published&callback=mm5LatestSliderCallback`;
+      script.async = true;
+      script.onerror = () => {
+        track.innerHTML = '<div class="mm5-loading">Unable to load latest posts.</div>';
+      };
+      document.body.appendChild(script);
+    })();
+
+  })();
+  </script>
+
+ <div class='mobile-hub'>
+
+    
+  <div id='emb99d-footer' style='background:#111; text-align:center; padding:10px 0; font-family:Raleway, Arial, sans-serif;'>
+
+    <a href='/' rel='noopener noreferrer' style='color:#04ff00; margin:0 6px; text-decoration:none;'>Home</a>
+    <span style='color:#fff;'>|</span>
+    
+    <a href='https://www.marketing2advertising.com/p/contact-us.html' rel='noopener noreferrer' style='color:#04ff00; margin:0 6px; text-decoration:none;'>Contact</a>
+    <span style='color:#fff;'>|</span>
+    
+    <a href='https://www.marketing2advertising.com/p/privacy-policy.html' rel='noopener noreferrer' style='color:#04ff00; margin:0 6px; text-decoration:none;' target='_blank'>Privacy</a>
+    <span style='color:#fff;'>|</span>
+    
+    <a href='https://www.marketing2advertising.com/p/affiliate-marketing-and-adsense.html' rel='noopener noreferrer' style='color:#04ff00; margin:0 6px; text-decoration:none;' target='_blank'>Disclosure</a>
+    <span style='color:#fff;'>|</span>
+    
+    <a href='https://www.marketing2advertising.com/p/terms-and-conditions.html' rel='noopener noreferrer' style='color:#04ff00; margin:0 6px; text-decoration:none;' target='_blank'>Terms</a>
+  
+    <p style='color:#aaa; font-size:14px; margin:10px 0 0;'>
+      &#169; Marketing2Advertising. All rights reserved.
+    </p>
+
+</div>
+
+<script>
+(function() {
+  try {
+    if (window.self !== window.top) {
+      var el = document.getElementById(&quot;emb99d-footer&quot;);
+      if (el) el.style.display = &quot;none&quot;;
+    }
+  } catch (e) {
+    // If cross-origin iframe blocks access, still hide it
+    var el = document.getElementById(&quot;emb99d-footer&quot;);
+    if (el) el.style.display = &quot;none&quot;;
+  }
+})();
+</script>
+  
+<div class='mobile-only-bar'/>
+  </div>
+    
+      <script>
+(function() {
+  try {
+    // Detect if page is inside iframe
+    if (window.self !== window.top) {
+      var el = document.getElementById(&quot;e66d-hide&quot;);
+      if (el) el.style.display = &quot;none&quot;;
+    }
+  } catch (e) {
+    // If cross-origin iframe, still hide
+    var el = document.getElementById(&quot;e66d-hide&quot;);
+    if (el) el.style.display = &quot;none&quot;;
+  }
+})();
+</script>
+    
+      
+
+</body>
+</html>
